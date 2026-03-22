@@ -1,9 +1,9 @@
 import { useTabStore } from '../store/useTabStore';
-import { Search, Plus, Download, Upload, CheckSquare, RefreshCw, PictureInPicture2 } from 'lucide-react';
+import { Search, Plus, Download, Upload, CheckSquare, RefreshCw, PictureInPicture2, ListTodo } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
 import Board from './Board';
 
-export default function TopBar({ onOpenCommandPalette, onAddCollection, onImportTabs }) {
+export default function TopBar({ onOpenCommandPalette, onAddCollection, onImportTabs, onToggleTodo }) {
   const workspace = useTabStore((s) => s.workspaces.find(w => w.id === s.activeWorkspaceId));
   const addToast = useTabStore((s) => s.addToast);
   const selectionMode = useTabStore((s) => s.selectionMode);
@@ -110,6 +110,10 @@ export default function TopBar({ onOpenCommandPalette, onAddCollection, onImport
         <span className="topbar-workspace-badge">{totalTabs} tabs</span>
       </div>
       <div className="topbar-right">
+        <button className="topbar-btn" onClick={onToggleTodo} title="To-Do List">
+          <ListTodo size={16} />
+          Tasks
+        </button>
         <button className="topbar-btn" onClick={handlePiP} title="Picture-in-Picture">
           <PictureInPicture2 size={16} />
           PiP Mode

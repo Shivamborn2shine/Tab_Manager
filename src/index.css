@@ -1806,3 +1806,211 @@ select.modal-input option {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ============================================
+   Todo Sidebar
+   ============================================ */
+
+.todo-sidebar {
+  width: 300px;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border-primary);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-lg);
+  gap: var(--space-lg);
+  backdrop-filter: blur(12px);
+  z-index: 5;
+  transition: transform var(--transition-base);
+}
+
+.todo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.todo-header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--text-primary);
+}
+
+.todo-header-icon {
+  color: var(--accent-indigo);
+}
+
+.todo-header h3 {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.todo-close-btn {
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.todo-close-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.todo-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.todo-progress-text {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.todo-progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.todo-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-indigo), var(--accent-violet));
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+.todo-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.todo-empty {
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  margin-top: var(--space-xl);
+}
+
+.todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.todo-item:hover {
+  border-color: var(--border-secondary);
+}
+
+.todo-item.completed .todo-text {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+}
+
+.todo-checkbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--border-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-top: 2px;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.todo-item:not(.completed) .todo-checkbox:hover {
+  border-color: var(--accent-indigo);
+  background: var(--accent-indigo-glow);
+}
+
+.todo-item.completed .todo-checkbox {
+  background: var(--accent-indigo);
+  border-color: var(--accent-indigo);
+}
+
+.todo-text {
+  flex: 1;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+
+.todo-delete-btn {
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.todo-item:hover .todo-delete-btn {
+  opacity: 1;
+}
+
+.todo-delete-btn:hover {
+  color: var(--accent-rose);
+}
+
+.todo-input-form {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.todo-input {
+  flex: 1;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast);
+}
+
+.todo-input:focus {
+  border-color: var(--accent-indigo);
+}
+
+.todo-add-btn {
+  width: 36px;
+  height: 36px;
+  background: var(--accent-indigo);
+  color: white;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.todo-add-btn:hover:not(:disabled) {
+  background: var(--accent-violet);
+}
+
+.todo-add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

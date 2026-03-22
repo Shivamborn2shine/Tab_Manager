@@ -8,12 +8,14 @@ import AddWorkspaceModal from './components/AddWorkspaceModal';
 import AddCollectionModal from './components/AddCollectionModal';
 import ImportTabsModal from './components/ImportTabsModal';
 import Toast from './components/Toast';
+import TodoSidebar from './components/TodoSidebar';
 
 export default function App() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [addWorkspaceOpen, setAddWorkspaceOpen] = useState(false);
   const [addCollectionOpen, setAddCollectionOpen] = useState(false);
   const [importTabsOpen, setImportTabsOpen] = useState(false);
+  const [todoOpen, setTodoOpen] = useState(false);
   const [incomingTabs, setIncomingTabs] = useState(null);
 
   const toasts = useTabStore((s) => s.toasts);
@@ -133,8 +135,12 @@ export default function App() {
           onOpenCommandPalette={() => setCommandPaletteOpen(true)}
           onAddCollection={() => setAddCollectionOpen(true)}
           onImportTabs={() => setImportTabsOpen(true)}
+          onToggleTodo={() => setTodoOpen(p => !p)}
         />
-        <Board />
+        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+          <Board />
+          {todoOpen && <TodoSidebar onClose={() => setTodoOpen(false)} />}
+        </div>
       </div>
 
       {commandPaletteOpen && (

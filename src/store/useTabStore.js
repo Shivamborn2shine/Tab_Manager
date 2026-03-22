@@ -33,6 +33,7 @@ const DEFAULT_WORKSPACE = {
       tabs: [],
     },
   ],
+  todos: [],
 };
 
 export const useTabStore = create(
@@ -377,6 +378,39 @@ export const useTabStore = create(
               : w
           ),
         })),
+
+      // To-Do Actions
+      addTodo: (text) => set((state) => ({
+        workspaces: state.workspaces.map((w) =>
+          w.id === state.activeWorkspaceId
+            ? { ...w, todos: [...(w.todos || []), { id: createId(), text, completed: false }] }
+            : w
+        ),
+      })),
+
+      toggleTodo: (todoId) => set((state) => ({
+        workspaces: state.workspaces.map((w) =>
+          w.id === state.activeWorkspaceId
+            ? {
+                ...w,
+                todos: (w.todos || []).map((t) =>
+                  t.id === todoId ? { ...t, completed: !t.completed } : t
+                ),
+              }
+            : w
+        ),
+      })),
+
+      deleteTodo: (todoId) => set((state) => ({
+        workspaces: state.workspaces.map((w) =>
+          w.id === state.activeWorkspaceId
+            ? {
+                ...w,
+                todos: (w.todos || []).filter((t) => t.id !== todoId),
+              }
+            : w
+        ),
+      })),
 
       // Drag & Drop — move tab between collections
       moveTab: (fromCollectionId, toCollectionId, tabId, toIndex) => {
