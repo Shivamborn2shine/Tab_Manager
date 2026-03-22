@@ -16,11 +16,10 @@ import SelectionActionBar from './SelectionActionBar';
 import { Plus, LayoutGrid } from 'lucide-react';
 
 export default function Board() {
-  const getActiveWorkspace = useTabStore((s) => s.getActiveWorkspace);
   const moveTab = useTabStore((s) => s.moveTab);
   const addCollection = useTabStore((s) => s.addCollection);
   const selectionMode = useTabStore((s) => s.selectionMode);
-  const workspace = getActiveWorkspace();
+  const workspace = useTabStore((s) => s.workspaces.find(w => w.id === s.activeWorkspaceId));
   const [activeTab, setActiveTab] = useState(null);
   const [activeCollectionId, setActiveCollectionId] = useState(null);
 

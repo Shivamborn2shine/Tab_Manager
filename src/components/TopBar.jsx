@@ -2,11 +2,10 @@ import { useTabStore } from '../store/useTabStore';
 import { Search, Plus, Download, Upload, CheckSquare, RefreshCw } from 'lucide-react';
 
 export default function TopBar({ onOpenCommandPalette, onAddCollection, onImportTabs }) {
-  const getActiveWorkspace = useTabStore((s) => s.getActiveWorkspace);
+  const workspace = useTabStore((s) => s.workspaces.find(w => w.id === s.activeWorkspaceId));
   const addToast = useTabStore((s) => s.addToast);
   const selectionMode = useTabStore((s) => s.selectionMode);
   const toggleSelectionMode = useTabStore((s) => s.toggleSelectionMode);
-  const workspace = getActiveWorkspace();
 
   if (!workspace) return null;
 

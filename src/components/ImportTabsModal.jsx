@@ -2,12 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { useTabStore } from '../store/useTabStore';
 
 export default function ImportTabsModal({ onClose, prefillTabs = null }) {
-  const getActiveWorkspace = useTabStore((s) => s.getActiveWorkspace);
   const importTabs = useTabStore((s) => s.importTabs);
+  const workspace = useTabStore((s) => s.workspaces.find(w => w.id === s.activeWorkspaceId));
   const [text, setText] = useState('');
   const [targetCollection, setTargetCollection] = useState('');
   const textareaRef = useRef(null);
-  const workspace = getActiveWorkspace();
 
   useEffect(() => {
     textareaRef.current?.focus();

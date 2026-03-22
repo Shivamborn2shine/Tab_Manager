@@ -11,8 +11,8 @@ export default function SelectionActionBar() {
   const batchDelete = useTabStore((s) => s.batchDelete);
   const batchMoveTo = useTabStore((s) => s.batchMoveTo);
   const getSelectedTabData = useTabStore((s) => s.getSelectedTabData);
-  const getActiveWorkspace = useTabStore((s) => s.getActiveWorkspace);
   const addToast = useTabStore((s) => s.addToast);
+  const workspace = useTabStore((s) => s.workspaces.find(w => w.id === s.activeWorkspaceId));
 
   const [moveDropdownOpen, setMoveDropdownOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -21,7 +21,6 @@ export default function SelectionActionBar() {
 
   if (!selectionMode || count === 0) return null;
 
-  const workspace = getActiveWorkspace();
   const collections = workspace?.collections || [];
 
   const handleCopyUrls = async () => {
