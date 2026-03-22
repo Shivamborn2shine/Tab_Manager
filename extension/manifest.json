@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Manager 2.0 — Tab Capture",
+  "version": "1.0.0",
+  "description": "Quickly capture all your open browser tabs and save them to Tab Manager 2.0",
+  "permissions": ["tabs", "activeTab"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

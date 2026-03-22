@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tab Manager 2.0</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup">
+    <div class="popup-header">
+      <div class="popup-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+        </svg>
+      </div>
+      <div>
+        <h1>Tab Manager 2.0</h1>
+        <p id="tabCount">Scanning tabs...</p>
+      </div>
+    </div>
+
+    <!-- Tab Preview List -->
+    <div class="tab-list" id="tabList">
+      <div class="tab-list-loading">Loading tabs...</div>
+    </div>
+
+    <!-- Select Controls -->
+    <div class="select-controls" id="selectControls" style="display: none;">
+      <button id="selectAll" class="select-btn">Select All</button>
+      <button id="deselectAll" class="select-btn">Deselect All</button>
+      <span class="selected-count" id="selectedCount">0 selected</span>
+    </div>
+
+    <div class="popup-actions">
+      <button id="sendToApp" class="popup-btn primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+        </svg>
+        Send to Tab Manager
+      </button>
+      <button id="copyToClipboard" class="popup-btn secondary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy as JSON
+      </button>
+    </div>
+
+    <div id="status" class="popup-status"></div>
+
+    <div class="popup-footer">
+      <p class="popup-help">
+        "Send to Tab Manager" opens the app and imports your tabs instantly.
+      </p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
