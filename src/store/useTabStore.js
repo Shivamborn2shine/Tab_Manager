@@ -357,6 +357,27 @@ export const useTabStore = create(
           ),
         })),
 
+      updateTabTag: (collectionId, tabId, tag) =>
+        set((state) => ({
+          workspaces: state.workspaces.map((w) =>
+            w.id === state.activeWorkspaceId
+              ? {
+                  ...w,
+                  collections: w.collections.map((c) =>
+                    c.id === collectionId
+                      ? {
+                          ...c,
+                          tabs: c.tabs.map((t) =>
+                            t.id === tabId ? { ...t, tag } : t
+                          ),
+                        }
+                      : c
+                  ),
+                }
+              : w
+          ),
+        })),
+
       // Drag & Drop — move tab between collections
       moveTab: (fromCollectionId, toCollectionId, tabId, toIndex) => {
         set((state) => {

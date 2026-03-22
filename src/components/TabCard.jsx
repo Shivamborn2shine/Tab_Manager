@@ -1,20 +1,30 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTabStore } from '../store/useTabStore';
-import { ExternalLink, Pin, Trash2, Globe, Copy, Check } from 'lucide-react';
+import { ExternalLink, Pin, Trash2, Globe, Copy, Check, Tag } from 'lucide-react';
 
 export default function TabCard({ tab, collectionId, isOverlay = false }) {
   const removeTab = useTabStore((s) => s.removeTab);
   const togglePin = useTabStore((s) => s.togglePin);
+  const updateTabTag = useTabStore((s) => s.updateTabTag);
   const addToast = useTabStore((s) => s.addToast);
   const selectionMode = useTabStore((s) => s.selectionMode);
   const selectedTabIds = useTabStore((s) => s.selectedTabIds);
   const toggleSelection = useTabStore((s) => s.toggleSelection);
   const [imgError, setImgError] = useState(false);
   const [justCopied, setJustCopied] = useState(false);
+  const [isEditingTag, setIsEditingTag] = useState(false);
+  const [tagInput, setTagInput] = useState(tab.tag || '');
+  const tagInputRef = useRef(null);
 
   const isSelected = selectedTabIds.includes(tab.id);
+
+  useEffect(() => {
+    if (isEditingTag && tagInputRef.current) {
+      tagInputRef.current.focus();
+    }
+  }, [isEditingTag]);
 
   const {
     attributes,
@@ -61,6 +71,28 @@ export default function TabCard({ tab, collectionId, isOverlay = false }) {
       setTimeout(() => setJustCopied(false), 1500);
     } catch {
       addToast('Failed to copy URL', 'error');
+    }
+  };
+
+  const saveTag = () => {
+    setIsEditingTag(false);
+    if (tagInput.trim() !== (tab.tag || '')) {
+      updateTabTag(collectionId, tab.id, tagInput.trim());
+      addToast('Tag updated');
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.stopPropagation();
+      e.preventDefault();
+      saveTag();
+    }
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      e.preventDefault();
+      setIsEditingTag(false);
+      setTagInput(tab.tag || '');
     }
   };
 
@@ -112,10 +144,38 @@ export default function TabCard({ tab, collectionId, isOverlay = false }) {
       <div className="tab-card-info" onClick={selectionMode ? undefined : handleOpen} style={{ cursor: selectionMode ? 'default' : 'pointer' }}>
         <div className="tab-card-title">{tab.title}</div>
         <div className="tab-card-url">{domain}</div>
+        
+        {isEditingTag ? (
+          <input
+            type="text"
+            ref={tagInputRef}
+            className="tab-card-tag-input"
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            onBlur={saveTag}
+            onKeyDown={handleKeyDown}
+            onClick={(e) => e.stopPropagation()}
+            placeholder="Add a phrase or tag..."
+            style={{ width: '100%', marginTop: '4px', fontSize: '11px', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border)' }}
+          />
+        ) : (
+          tab.tag && <div className="tab-card-tag" style={{ marginTop: '2px', fontSize: '11px', color: 'var(--text-muted)', display: 'inline-block', background: 'var(--surface-active)', padding: '2px 6px', borderRadius: '10px' }}>{tab.tag}</div>
+        )}
       </div>
 
       {!isOverlay && !selectionMode && (
         <div className="tab-card-actions">
+          <button
+            className="tab-card-action tag"
+            onClick={(e) => {
+              e.stopPropagation();
+              setTagInput(tab.tag || '');
+              setIsEditingTag(true);
+            }}
+            title={tab.tag ? 'Edit tag' : 'Add tag'}
+          >
+            <Tag size={14} />
+          </button>
           <button
             className="tab-card-action copy"
             onClick={handleCopy}
