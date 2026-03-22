@@ -1,5 +1,7 @@
 import { useTabStore } from '../store/useTabStore';
-import { Search, Plus, Download, Upload, CheckSquare, RefreshCw } from 'lucide-react';
+import { Search, Plus, Download, Upload, CheckSquare, RefreshCw, PictureInPicture2 } from 'lucide-react';
+import { createRoot } from 'react-dom/client';
+import Board from './Board';
 
 export default function TopBar({ onOpenCommandPalette, onAddCollection, onImportTabs }) {
   const workspace = useTabStore((s) => s.workspaces.find(w => w.id === s.activeWorkspaceId));
@@ -40,6 +42,65 @@ export default function TopBar({ onOpenCommandPalette, onAddCollection, onImport
     addToast(`Exported ${totalTabs} tabs from "${workspace.name}"`);
   };
 
+  const handlePiP = async () => {
+    if (!('documentPictureInPicture' in window)) {
+      addToast('Picture-in-Picture API is not supported in your browser.', 'error');
+      return;
+    }
+    
+    try {
+      const pipWin = await window.documentPictureInPicture.requestWindow({
+        width: 800,
+        height: 600,
+      });
+
+      // Copy styles
+      [...document.styleSheets].forEach((styleSheet) => {
+        try {
+          const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
+          const style = document.createElement('style');
+          style.textContent = cssRules;
+          pipWin.document.head.appendChild(style);
+        } catch (e) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.type = styleSheet.type;
+          link.media = styleSheet.media;
+          link.href = styleSheet.href;
+          pipWin.document.head.appendChild(link);
+        }
+      });
+
+      // Prepare root container
+      const pipRoot = document.createElement('div');
+      pipRoot.className = 'app-layout';
+      
+      const mainContent = document.createElement('div');
+      mainContent.className = 'main-content board-pip';
+      mainContent.style.width = '100%';
+      mainContent.style.height = '100vh';
+      mainContent.style.overflow = 'auto';
+      mainContent.style.padding = '20px'; // Add some padding so it looks nice
+      
+      pipRoot.appendChild(mainContent);
+      pipWin.document.body.appendChild(pipRoot);
+
+      const root = createRoot(mainContent);
+      root.render(
+        <Board />
+      );
+
+      pipWin.addEventListener('pagehide', () => {
+        root.unmount();
+      });
+      
+      addToast('Opened Tab Manager in Picture-in-Picture');
+    } catch (err) {
+      console.error(err);
+      addToast('Failed to open Picture-in-Picture', 'error');
+    }
+  };
+
   return (
     <header className="topbar">
       <div className="topbar-left">
@@ -49,6 +110,10 @@ export default function TopBar({ onOpenCommandPalette, onAddCollection, onImport
         <span className="topbar-workspace-badge">{totalTabs} tabs</span>
       </div>
       <div className="topbar-right">
+        <button className="topbar-btn" onClick={handlePiP} title="Picture-in-Picture">
+          <PictureInPicture2 size={16} />
+          PiP Mode
+        </button>
         <button className="topbar-btn" onClick={() => window.location.reload()} title="Refresh App">
           <RefreshCw size={16} />
           Refresh

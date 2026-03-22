@@ -19,17 +19,25 @@ export default function CommandPalette({ onClose }) {
     setSelectedIndex(0);
   }, [query]);
 
+  const hasQuery = query.trim().length > 0;
+  const maxIndex = hasQuery ? results.length : 0;
+
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex((i) => Math.min(i + 1, results.length - 1));
+      setSelectedIndex((i) => Math.min(i + 1, maxIndex));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex((i) => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && results.length > 0) {
+    } else if (e.key === 'Enter') {
       e.preventDefault();
-      window.open(results[selectedIndex].url, '_blank', 'noopener');
-      onClose();
+      if (hasQuery && selectedIndex === results.length) {
+        window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank', 'noopener');
+        onClose();
+      } else if (results.length > 0 && selectedIndex < results.length) {
+        window.open(results[selectedIndex].url, '_blank', 'noopener');
+        onClose();
+      }
     } else if (e.key === 'Escape') {
       onClose();
     }
@@ -63,7 +71,7 @@ export default function CommandPalette({ onClose }) {
         </div>
 
         <div className="command-palette-results" ref={resultsRef}>
-          {query.trim() && results.length === 0 && (
+          {hasQuery && results.length === 0 && (
             <div className="command-palette-no-results">
               No tabs found matching "{query}"
             </div>
@@ -116,6 +124,30 @@ export default function CommandPalette({ onClose }) {
               </div>
             );
           })}
+
+          {hasQuery && (
+            <div
+              className={`command-palette-result ${
+                selectedIndex === results.length ? 'selected' : ''
+              }`}
+              onClick={() => {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank', 'noopener');
+                onClose();
+              }}
+              onMouseEnter={() => setSelectedIndex(results.length)}
+            >
+              <div className="command-palette-result-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-active)', borderRadius: '4px' }}>
+                <Search size={14} style={{ color: 'var(--text-muted)' }} />
+              </div>
+              <div className="command-palette-result-info">
+                <div className="command-palette-result-title">Search Google for "{query}"</div>
+                <div className="command-palette-result-meta">
+                  <span>Web Search</span>
+                </div>
+              </div>
+              <ExternalLink size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            </div>
+          )}
         </div>
 
         <div className="command-palette-footer">
