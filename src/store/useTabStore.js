@@ -636,13 +636,16 @@ export const useTabStore = create(
 );
 
 // Subscribe to state changes and sync to Firestore (user-scoped)
-let prevWorkspaces = useTabStore.getState().workspaces;
+let prevWorkspacesStr = JSON.stringify(useTabStore.getState().workspaces);
 let prevActiveId = useTabStore.getState().activeWorkspaceId;
 
 useTabStore.subscribe((state) => {
   if (!currentUid) return; // Don't sync if no user is logged in
-  if (state.workspaces !== prevWorkspaces || state.activeWorkspaceId !== prevActiveId) {
-    prevWorkspaces = state.workspaces;
+  
+  const currentWorkspacesStr = JSON.stringify(state.workspaces);
+  
+  if (currentWorkspacesStr !== prevWorkspacesStr || state.activeWorkspaceId !== prevActiveId) {
+    prevWorkspacesStr = currentWorkspacesStr;
     prevActiveId = state.activeWorkspaceId;
     saveToFirestore(
       currentUid,

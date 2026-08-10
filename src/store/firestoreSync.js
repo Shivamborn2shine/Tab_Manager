@@ -68,6 +68,8 @@ export const subscribeToFirestore = (uid, onData, onError) => {
     const unsubscribe = onSnapshot(
       getUserDocRef(uid),
       (snap) => {
+        if (snap.metadata.hasPendingWrites) return; // Ignore local writes to prevent sync loop
+        
         if (snap.exists()) {
           const data = snap.data();
           if (data && Array.isArray(data.workspaces)) {
