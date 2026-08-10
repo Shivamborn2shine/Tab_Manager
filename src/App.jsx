@@ -11,6 +11,7 @@ import AddCollectionModal from './components/AddCollectionModal';
 import ImportTabsModal from './components/ImportTabsModal';
 import Toast from './components/Toast';
 import TodoSidebar from './components/TodoSidebar';
+import WelcomeModal from './components/WelcomeModal';
 
 export default function App() {
   // Auth state
@@ -26,6 +27,7 @@ export default function App() {
   const firebaseReady = useTabStore((s) => s.firebaseReady);
   const initFromFirestore = useTabStore((s) => s.initFromFirestore);
   const clearUserData = useTabStore((s) => s.clearUserData);
+  const hasSeenWelcome = useTabStore((s) => s.hasSeenWelcome);
 
   // UI state
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -186,6 +188,10 @@ export default function App() {
 
       {commandPaletteOpen && (
         <CommandPalette onClose={() => setCommandPaletteOpen(false)} />
+      )}
+
+      {!hasSeenWelcome && (
+        <WelcomeModal />
       )}
 
       {addWorkspaceOpen && (

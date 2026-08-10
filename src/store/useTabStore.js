@@ -39,8 +39,10 @@ export const useTabStore = create(
       // Firebase status: 'loading' | 'synced' | 'syncing' | 'offline'
       firebaseReady: false,
       syncStatus: 'loading',
+      hasSeenWelcome: false,
 
       setSyncStatus: (status) => set({ syncStatus: status }),
+      setHasSeenWelcome: (val) => set({ hasSeenWelcome: val }),
 
       /**
        * Initialize data for a given user.
