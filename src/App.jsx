@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuthStore } from './store/useAuthStore';
 import { useTabStore } from './store/useTabStore';
+import AuthPage from './components/AuthPage';
 import Sidebar from './components/Sidebar';
 import Board from './components/Board';
 import TopBar from './components/TopBar';
@@ -11,6 +13,21 @@ import Toast from './components/Toast';
 import TodoSidebar from './components/TodoSidebar';
 
 export default function App() {
+  // Auth state
+  const user = useAuthStore((s) => s.user);
+  const authLoading = useAuthStore((s) => s.authLoading);
+  const initAuth = useAuthStore((s) => s.initAuth);
+
+  // Tab store state
+  const toasts = useTabStore((s) => s.toasts);
+  const getActiveWorkspace = useTabStore((s) => s.getActiveWorkspace);
+  const importTabs = useTabStore((s) => s.importTabs);
+  const addToast = useTabStore((s) => s.addToast);
+  const firebaseReady = useTabStore((s) => s.firebaseReady);
+  const initFromFirestore = useTabStore((s) => s.initFromFirestore);
+  const clearUserData = useTabStore((s) => s.clearUserData);
+
+  // UI state
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [addWorkspaceOpen, setAddWorkspaceOpen] = useState(false);
   const [addCollectionOpen, setAddCollectionOpen] = useState(false);
@@ -18,20 +35,29 @@ export default function App() {
   const [todoOpen, setTodoOpen] = useState(false);
   const [incomingTabs, setIncomingTabs] = useState(null);
 
-  const toasts = useTabStore((s) => s.toasts);
-  const getActiveWorkspace = useTabStore((s) => s.getActiveWorkspace);
-  const importTabs = useTabStore((s) => s.importTabs);
-  const addToast = useTabStore((s) => s.addToast);
-  const firebaseReady = useTabStore((s) => s.firebaseReady);
-  const initFromFirestore = useTabStore((s) => s.initFromFirestore);
-
-  // Load data from Firestore on mount
+  // Initialize Firebase Auth listener on mount
   useEffect(() => {
-    initFromFirestore();
+    const unsubscribe = initAuth();
+    return () => unsubscribe();
   }, []);
+
+  // When auth state changes, load or clear tab data
+  useEffect(() => {
+    if (authLoading) return; // Still checking auth
+
+    if (user) {
+      // User is signed in — load their data
+      initFromFirestore(user.uid);
+    } else {
+      // User signed out — clear tab data
+      clearUserData();
+    }
+  }, [user, authLoading]);
 
   // Detect incoming tabs from Chrome extension via URL hash
   useEffect(() => {
+    if (!user || !firebaseReady) return;
+
     const hash = window.location.hash;
     if (hash.startsWith('#import=')) {
       try {
@@ -39,7 +65,6 @@ export default function App() {
         const tabsData = JSON.parse(decodeURIComponent(encoded));
 
         if (Array.isArray(tabsData) && tabsData.length > 0) {
-          // Always open import modal so user can pick a collection
           setIncomingTabs(tabsData);
           setImportTabsOpen(true);
           addToast(`${tabsData.length} tabs ready to import — pick a collection!`);
@@ -49,10 +74,9 @@ export default function App() {
         addToast('Failed to import tabs — invalid data', 'error');
       }
 
-      // Clean the URL hash
       window.history.replaceState(null, '', window.location.pathname);
     }
-  }, []);
+  }, [user, firebaseReady]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -77,8 +101,6 @@ export default function App() {
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
-    // Only show global overlay if dragging an external item (like a URL string)
-    // rather than dragging an internal tab card
     if (e.dataTransfer.types.includes('text/uri-list') || e.dataTransfer.types.includes('text/plain')) {
       setIsDraggingOver(true);
     }
@@ -111,6 +133,24 @@ export default function App() {
     [getActiveWorkspace, importTabs, addToast]
   );
 
+  // --- RENDER ---
+
+  // 1) Auth is still loading — show spinner
+  if (authLoading) {
+    return (
+      <div className="app-loading">
+        <div className="app-loading-spinner"></div>
+        <p>Checking your session…</p>
+      </div>
+    );
+  }
+
+  // 2) Not signed in — show auth page
+  if (!user) {
+    return <AuthPage />;
+  }
+
+  // 3) Signed in but Firestore data still loading
   if (!firebaseReady) {
     return (
       <div className="app-loading">
@@ -120,6 +160,7 @@ export default function App() {
     );
   }
 
+  // 4) Signed in and ready — show the dashboard
   return (
     <div
       className="app-layout"

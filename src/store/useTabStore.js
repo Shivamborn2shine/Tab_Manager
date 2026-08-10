@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { saveToFirestore, loadFromFirestore } from './firestoreSync';
+import { saveToFirestore, loadFromFirestore, subscribeToFirestore, migrateOldData } from './firestoreSync';
 
 const COLLECTION_COLORS = [
   '#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4',
@@ -9,61 +9,249 @@ const COLLECTION_COLORS = [
 
 const createId = () => Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
 
-const DEFAULT_WORKSPACE = {
-  id: createId(),
-  name: 'My Workspace',
-  emoji: '🚀',
-  collections: [
-    {
-      id: createId(),
-      name: 'Important',
-      color: '#6366f1',
-      tabs: [],
-    },
-    {
-      id: createId(),
-      name: 'Reading List',
-      color: '#10b981',
-      tabs: [],
-    },
-    {
-      id: createId(),
-      name: 'Development',
-      color: '#f59e0b',
-      tabs: [],
-    },
-  ],
-  todos: [],
-};
+export const SAMPLE_WORKSPACES = [
+  {
+    id: 'ws-main',
+    name: 'My Workspace',
+    emoji: '🚀',
+    collections: [
+      {
+        id: 'col-important',
+        name: 'Important',
+        color: '#6366f1',
+        tabs: [
+          {
+            id: 'tab-1',
+            title: 'GitHub - Where code is built',
+            url: 'https://github.com',
+            favicon: 'https://www.google.com/s2/favicons?domain=github.com&sz=32',
+            addedAt: Date.now() - 3600000,
+            pinned: true,
+            tag: 'Code',
+          },
+          {
+            id: 'tab-2',
+            title: 'Gmail - Email Inbox',
+            url: 'https://mail.google.com',
+            favicon: 'https://www.google.com/s2/favicons?domain=mail.google.com&sz=32',
+            addedAt: Date.now() - 7200000,
+            pinned: false,
+            tag: 'Work',
+          },
+          {
+            id: 'tab-3',
+            title: 'ChatGPT - AI Assistant',
+            url: 'https://chatgpt.com',
+            favicon: 'https://www.google.com/s2/favicons?domain=chatgpt.com&sz=32',
+            addedAt: Date.now() - 10800000,
+            pinned: false,
+            tag: 'AI',
+          },
+        ],
+      },
+      {
+        id: 'col-reading',
+        name: 'Reading List',
+        color: '#10b981',
+        tabs: [
+          {
+            id: 'tab-4',
+            title: 'Hacker News - Tech & Startup News',
+            url: 'https://news.ycombinator.com',
+            favicon: 'https://www.google.com/s2/favicons?domain=news.ycombinator.com&sz=32',
+            addedAt: Date.now() - 14400000,
+            pinned: false,
+            tag: 'News',
+          },
+          {
+            id: 'tab-5',
+            title: 'DEV Community - Developer Articles',
+            url: 'https://dev.to',
+            favicon: 'https://www.google.com/s2/favicons?domain=dev.to&sz=32',
+            addedAt: Date.now() - 18000000,
+            pinned: false,
+            tag: 'Articles',
+          },
+        ],
+      },
+      {
+        id: 'col-dev',
+        name: 'Development',
+        color: '#f59e0b',
+        tabs: [
+          {
+            id: 'tab-7',
+            title: 'React – The library for web and native UIs',
+            url: 'https://react.dev',
+            favicon: 'https://www.google.com/s2/favicons?domain=react.dev&sz=32',
+            addedAt: Date.now() - 25200000,
+            pinned: true,
+            tag: 'Docs',
+          },
+          {
+            id: 'tab-8',
+            title: 'Vite – Next Generation Frontend Tooling',
+            url: 'https://vite.dev',
+            favicon: 'https://www.google.com/s2/favicons?domain=vite.dev&sz=32',
+            addedAt: Date.now() - 28800000,
+            pinned: false,
+            tag: 'Tools',
+          },
+          {
+            id: 'tab-9',
+            title: 'Cloud Firestore Documentation - Firebase',
+            url: 'https://firebase.google.com/docs/firestore',
+            favicon: 'https://www.google.com/s2/favicons?domain=firebase.google.com&sz=32',
+            addedAt: Date.now() - 32400000,
+            pinned: false,
+            tag: 'Firebase',
+          },
+        ],
+      },
+    ],
+    todos: [
+      { id: 'todo-1', text: 'Review pull requests on GitHub', completed: false },
+      { id: 'todo-2', text: 'Update Firebase sync schema', completed: true },
+      { id: 'todo-3', text: 'Organize tab collections', completed: false },
+    ],
+  },
+];
+
+// Track the current user's UID for the Firestore sync subscription
+let currentUid = null;
+let firestoreUnsubscribe = null;
 
 export const useTabStore = create(
   persist(
     (set, get) => ({
-      workspaces: [DEFAULT_WORKSPACE],
-      activeWorkspaceId: DEFAULT_WORKSPACE.id,
+      workspaces: [],
+      activeWorkspaceId: null,
 
-      // Firebase loading state
+      // Firebase status: 'loading' | 'synced' | 'syncing' | 'offline'
       firebaseReady: false,
+      syncStatus: 'loading',
 
-      initFromFirestore: async () => {
-        const data = await loadFromFirestore();
-        if (data && data.workspaces && data.workspaces.length > 0) {
+      setSyncStatus: (status) => set({ syncStatus: status }),
+
+      /**
+       * Initialize data for a given user.
+       * Attempts migration from legacy path, then loads user data,
+       * then subscribes to real-time updates.
+       */
+      initFromFirestore: async (uid) => {
+        if (!uid) {
+          set({ firebaseReady: true, syncStatus: 'offline' });
+          return;
+        }
+
+        currentUid = uid;
+
+        // Clean up previous subscription if any
+        if (firestoreUnsubscribe) {
+          firestoreUnsubscribe();
+          firestoreUnsubscribe = null;
+        }
+
+        // Step 1: Attempt migration from legacy single-user data
+        const migrated = await migrateOldData(uid);
+        if (migrated && migrated.workspaces && migrated.workspaces.length > 0) {
+          const activeId = migrated.activeWorkspaceId && migrated.workspaces.some(w => w.id === migrated.activeWorkspaceId)
+            ? migrated.activeWorkspaceId
+            : migrated.workspaces[0].id;
           set({
-            workspaces: data.workspaces,
-            activeWorkspaceId: data.activeWorkspaceId || data.workspaces[0].id,
+            workspaces: migrated.workspaces,
+            activeWorkspaceId: activeId,
             firebaseReady: true,
+            syncStatus: 'synced',
+          });
+          get().addToast('Your tabs have been migrated to your account!');
+          // Subscribe and return early
+          firestoreUnsubscribe = subscribeToFirestore(
+            uid,
+            (remoteData) => {
+              if (remoteData.workspaces && remoteData.workspaces.length > 0) {
+                set({
+                  workspaces: remoteData.workspaces,
+                  activeWorkspaceId: remoteData.activeWorkspaceId || remoteData.workspaces[0].id,
+                  syncStatus: 'synced',
+                });
+              }
+            },
+            () => set({ syncStatus: 'offline' })
+          );
+          return;
+        }
+
+        // Step 2: Load user's own data from Firestore
+        const cloudData = await loadFromFirestore(uid);
+
+        if (cloudData && !cloudData.error && !cloudData.empty && Array.isArray(cloudData.workspaces) && cloudData.workspaces.length > 0) {
+          const activeId = cloudData.activeWorkspaceId && cloudData.workspaces.some(w => w.id === cloudData.activeWorkspaceId)
+            ? cloudData.activeWorkspaceId
+            : cloudData.workspaces[0].id;
+
+          set({
+            workspaces: cloudData.workspaces,
+            activeWorkspaceId: activeId,
+            firebaseReady: true,
+            syncStatus: 'synced',
           });
         } else {
-          // No cloud data yet — push current local state to Firestore
-          const state = get();
-          saveToFirestore({
-            workspaces: state.workspaces,
-            activeWorkspaceId: state.activeWorkspaceId,
+          // New user — seed with sample workspaces
+          set({
+            workspaces: SAMPLE_WORKSPACES,
+            activeWorkspaceId: SAMPLE_WORKSPACES[0].id,
+            firebaseReady: true,
+            syncStatus: 'syncing',
           });
-          set({ firebaseReady: true });
+          // Push sample data to cloud for this new user
+          if (!cloudData || !cloudData.error) {
+            saveToFirestore(
+              uid,
+              { workspaces: SAMPLE_WORKSPACES, activeWorkspaceId: SAMPLE_WORKSPACES[0].id },
+              (status) => set({ syncStatus: status })
+            );
+          } else {
+            set({ syncStatus: 'offline' });
+          }
         }
+
+        // Step 3: Subscribe to real-time changes
+        firestoreUnsubscribe = subscribeToFirestore(
+          uid,
+          (remoteData) => {
+            if (remoteData.workspaces && remoteData.workspaces.length > 0) {
+              set({
+                workspaces: remoteData.workspaces,
+                activeWorkspaceId: remoteData.activeWorkspaceId || remoteData.workspaces[0].id,
+                syncStatus: 'synced',
+              });
+            }
+          },
+          () => set({ syncStatus: 'offline' })
+        );
       },
-      
+
+      /**
+       * Reset store state when user signs out.
+       */
+      clearUserData: () => {
+        if (firestoreUnsubscribe) {
+          firestoreUnsubscribe();
+          firestoreUnsubscribe = null;
+        }
+        currentUid = null;
+        set({
+          workspaces: [],
+          activeWorkspaceId: null,
+          firebaseReady: false,
+          syncStatus: 'loading',
+          selectionMode: false,
+          selectedTabIds: [],
+          toasts: [],
+        });
+      },
+
       // Toast notifications
       toasts: [],
       addToast: (message, type = 'success') => {
@@ -78,7 +266,7 @@ export const useTabStore = create(
         }, 3000);
       },
 
-      // Multi-select state (not persisted — resets on reload)
+      // Multi-select state
       selectionMode: false,
       selectedTabIds: [],
 
@@ -152,7 +340,6 @@ export const useTabStore = create(
         if (ids.size === 0) return;
         const workspace = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
         if (!workspace) return;
-        // Gather selected tab objects
         const movedTabs = [];
         for (const c of workspace.collections) {
           for (const t of c.tabs) {
@@ -165,9 +352,7 @@ export const useTabStore = create(
             return {
               ...w,
               collections: w.collections.map((c) => {
-                // Remove selected from every collection
                 const filtered = c.tabs.filter((t) => !ids.has(t.id));
-                // Append to target
                 if (c.id === targetCollectionId) {
                   return { ...c, tabs: [...filtered, ...movedTabs] };
                 }
@@ -185,7 +370,7 @@ export const useTabStore = create(
       // Workspace CRUD
       getActiveWorkspace: () => {
         const state = get();
-        return state.workspaces.find((w) => w.id === state.activeWorkspaceId);
+        return state.workspaces.find((w) => w.id === state.activeWorkspaceId) || state.workspaces[0];
       },
 
       setActiveWorkspace: (id) => set({ activeWorkspaceId: id }),
@@ -276,7 +461,6 @@ export const useTabStore = create(
         const workspace = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
         if (!workspace) return;
 
-        // Duplicate Check across the entire workspace
         const normalizedUrl = url.trim().replace(/\/$/, '');
         let isDuplicate = false;
         for (const c of workspace.collections) {
@@ -431,7 +615,6 @@ export const useTabStore = create(
                 ...w,
                 collections: w.collections.map((c) => {
                   if (c.id === fromCollectionId && c.id === toCollectionId) {
-                    // Reorder within same collection
                     const filteredTabs = c.tabs.filter((t) => t.id !== tabId);
                     const insertIndex = Math.min(toIndex, filteredTabs.length);
                     filteredTabs.splice(insertIndex, 0, tab);
@@ -460,7 +643,6 @@ export const useTabStore = create(
         const workspace = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
         if (!workspace) return;
 
-        // Collect all existing normalized URLs in workspace
         const existingUrls = new Set();
         workspace.collections.forEach(c => {
           c.tabs.forEach(t => existingUrls.add(t.url.trim().replace(/\/$/, '')));
@@ -475,7 +657,7 @@ export const useTabStore = create(
             duplicateCount++;
           } else {
             uniqueTabs.push(t);
-            existingUrls.add(normalized); // Prevent duplicates within the import batch itself
+            existingUrls.add(normalized);
           }
         }
 
@@ -533,7 +715,8 @@ export const useTabStore = create(
             for (const t of c.tabs) {
               if (
                 t.title.toLowerCase().includes(q) ||
-                t.url.toLowerCase().includes(q)
+                t.url.toLowerCase().includes(q) ||
+                (t.tag && t.tag.toLowerCase().includes(q))
               ) {
                 results.push({
                   ...t,
@@ -573,18 +756,22 @@ export const useTabStore = create(
   )
 );
 
-// Subscribe to state changes and sync to Firestore
+// Subscribe to state changes and sync to Firestore (user-scoped)
 let prevWorkspaces = useTabStore.getState().workspaces;
 let prevActiveId = useTabStore.getState().activeWorkspaceId;
 
 useTabStore.subscribe((state) => {
-  // Only sync when persisted data actually changes
+  if (!currentUid) return; // Don't sync if no user is logged in
   if (state.workspaces !== prevWorkspaces || state.activeWorkspaceId !== prevActiveId) {
     prevWorkspaces = state.workspaces;
     prevActiveId = state.activeWorkspaceId;
-    saveToFirestore({
-      workspaces: state.workspaces,
-      activeWorkspaceId: state.activeWorkspaceId,
-    });
+    saveToFirestore(
+      currentUid,
+      {
+        workspaces: state.workspaces,
+        activeWorkspaceId: state.activeWorkspaceId,
+      },
+      (status) => useTabStore.getState().setSyncStatus(status)
+    );
   }
 });

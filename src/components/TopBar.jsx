@@ -1,27 +1,28 @@
 import { useTabStore } from '../store/useTabStore';
-import { Search, Plus, Download, Upload, CheckSquare, RefreshCw, PictureInPicture2, ListTodo } from 'lucide-react';
+import { Search, Plus, Download, Upload, CheckSquare, RefreshCw, PictureInPicture2, ListTodo, Cloud, CloudOff } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
 import Board from './Board';
 
 export default function TopBar({ onOpenCommandPalette, onAddCollection, onImportTabs, onToggleTodo }) {
-  const workspace = useTabStore((s) => s.workspaces.find(w => w.id === s.activeWorkspaceId));
+  const workspace = useTabStore((s) => s.getActiveWorkspace());
   const addToast = useTabStore((s) => s.addToast);
   const selectionMode = useTabStore((s) => s.selectionMode);
   const toggleSelectionMode = useTabStore((s) => s.toggleSelectionMode);
+  const syncStatus = useTabStore((s) => s.syncStatus);
 
   if (!workspace) return null;
 
-  const totalTabs = workspace.collections.reduce((s, c) => s + c.tabs.length, 0);
+  const totalTabs = workspace.collections ? workspace.collections.reduce((s, c) => s + (c.tabs ? c.tabs.length : 0), 0) : 0;
 
   const handleExport = () => {
     const exportData = {
       workspace: workspace.name,
       emoji: workspace.emoji,
       exportedAt: new Date().toISOString(),
-      collections: workspace.collections.map((c) => ({
+      collections: (workspace.collections || []).map((c) => ({
         name: c.name,
         color: c.color,
-        tabs: c.tabs.map((t) => ({
+        tabs: (c.tabs || []).map((t) => ({
           title: t.title,
           url: t.url,
           pinned: t.pinned,
@@ -61,7 +62,7 @@ export default function TopBar({ onOpenCommandPalette, onAddCollection, onImport
           const style = document.createElement('style');
           style.textContent = cssRules;
           pipWin.document.head.appendChild(style);
-        } catch (e) {
+        } catch {
           const link = document.createElement('link');
           link.rel = 'stylesheet';
           link.type = styleSheet.type;
@@ -80,7 +81,7 @@ export default function TopBar({ onOpenCommandPalette, onAddCollection, onImport
       mainContent.style.width = '100%';
       mainContent.style.height = '100vh';
       mainContent.style.overflow = 'auto';
-      mainContent.style.padding = '20px'; // Add some padding so it looks nice
+      mainContent.style.padding = '20px';
       
       pipRoot.appendChild(mainContent);
       pipWin.document.body.appendChild(pipRoot);
@@ -108,6 +109,13 @@ export default function TopBar({ onOpenCommandPalette, onAddCollection, onImport
           {workspace.emoji} {workspace.name}
         </h2>
         <span className="topbar-workspace-badge">{totalTabs} tabs</span>
+
+        {/* Sync Status Badge */}
+        <div className={`sync-status-badge ${syncStatus}`} title={`Cloud Sync: ${syncStatus}`}>
+          {syncStatus === 'synced' && <><Cloud size={13} /> Firebase Synced</>}
+          {syncStatus === 'syncing' && <><RefreshCw size={13} className="spin" /> Syncing…</>}
+          {syncStatus === 'offline' && <><CloudOff size={13} /> Local Mode</>}
+        </div>
       </div>
       <div className="topbar-right">
         <button className="topbar-btn" onClick={onToggleTodo} title="To-Do List">
@@ -117,10 +125,6 @@ export default function TopBar({ onOpenCommandPalette, onAddCollection, onImport
         <button className="topbar-btn" onClick={handlePiP} title="Picture-in-Picture">
           <PictureInPicture2 size={16} />
           PiP Mode
-        </button>
-        <button className="topbar-btn" onClick={() => window.location.reload()} title="Refresh App">
-          <RefreshCw size={16} />
-          Refresh
         </button>
         <button className="topbar-btn" onClick={onOpenCommandPalette}>
           <Search size={16} />
@@ -151,4 +155,5 @@ export default function TopBar({ onOpenCommandPalette, onAddCollection, onImport
     </header>
   );
 }
+
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTabStore } from '../store/useTabStore';
 import { Search, Plus, Trash2, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 import ConfirmDialog from './ConfirmDialog';
+import UserMenu from './UserMenu';
 
 export default function Sidebar({ onAddWorkspace }) {
   const workspaces = useTabStore((s) => s.workspaces);
@@ -118,6 +119,7 @@ export default function Sidebar({ onAddWorkspace }) {
             <div className="sidebar-stat-label">Tabs</div>
           </div>
         </div>
+        <UserMenu />
       </div>
 
       <ConfirmDialog
