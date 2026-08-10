@@ -648,6 +648,41 @@ ul, ol {
   box-shadow: 0 0 25px rgba(99, 102, 241, 0.3);
 }
 
+.topbar-save-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  border: 1px solid var(--border-primary);
+  margin-left: var(--space-md);
+}
+
+.topbar-save-btn.unsaved {
+  background: linear-gradient(135deg, var(--accent-indigo), var(--accent-violet));
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-glow);
+  cursor: pointer;
+  animation: pulse-glow 2s infinite;
+}
+
+.topbar-save-btn.unsaved:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+
 .topbar-shortcut {
   padding: 1px 6px;
   background: var(--bg-tertiary);

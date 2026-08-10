@@ -56,6 +56,18 @@ export default function App() {
     }
   }, [user, authLoading]);
 
+  // Prevent closing tab if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (useTabStore.getState().hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = ''; // Standard way to trigger browser warning
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
   // Detect incoming tabs from Chrome extension via URL hash
   useEffect(() => {
     if (!user || !firebaseReady) return;

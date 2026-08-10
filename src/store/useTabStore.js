@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { saveToFirestore, loadFromFirestore, subscribeToFirestore } from './firestoreSync';
+import { saveToFirestore, loadFromFirestore } from './firestoreSync';
 
 const COLLECTION_COLORS = [
   '#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4',
@@ -40,9 +40,11 @@ export const useTabStore = create(
       firebaseReady: false,
       syncStatus: 'loading',
       hasSeenWelcome: false,
+      hasUnsavedChanges: false,
 
       setSyncStatus: (status) => set({ syncStatus: status }),
       setHasSeenWelcome: (val) => set({ hasSeenWelcome: val }),
+      setHasUnsavedChanges: (val) => set({ hasUnsavedChanges: val }),
 
       /**
        * Initialize data for a given user.
@@ -57,11 +59,7 @@ export const useTabStore = create(
 
         currentUid = uid;
 
-        // Clean up previous subscription if any
-        if (firestoreUnsubscribe) {
-          firestoreUnsubscribe();
-          firestoreUnsubscribe = null;
-        }
+        currentUid = uid;
 
         // Load user's own data from Firestore
         const cloudData = await loadFromFirestore(uid);
@@ -83,44 +81,32 @@ export const useTabStore = create(
             workspaces: SAMPLE_WORKSPACES,
             activeWorkspaceId: SAMPLE_WORKSPACES[0].id,
             firebaseReady: true,
-            syncStatus: 'syncing',
+            syncStatus: 'synced',
+            hasUnsavedChanges: true, // Prompt them to save their new hub!
           });
-          // Push sample data to cloud for this new user
-          if (!cloudData || !cloudData.error) {
-            saveToFirestore(
-              uid,
-              { workspaces: SAMPLE_WORKSPACES, activeWorkspaceId: SAMPLE_WORKSPACES[0].id },
-              (status) => set({ syncStatus: status })
-            );
-          } else {
-            set({ syncStatus: 'offline' });
-          }
         }
+      },
 
-        // Step 3: Subscribe to real-time changes
-        firestoreUnsubscribe = subscribeToFirestore(
-          uid,
-          (remoteData) => {
-            if (remoteData.workspaces && remoteData.workspaces.length > 0) {
-              set({
-                workspaces: remoteData.workspaces,
-                activeWorkspaceId: remoteData.activeWorkspaceId || remoteData.workspaces[0].id,
-                syncStatus: 'synced',
-              });
-            }
-          },
-          () => set({ syncStatus: 'offline' })
-        );
+      saveToCloud: async () => {
+        const { workspaces, activeWorkspaceId } = get();
+        if (!currentUid) return;
+        
+        set({ syncStatus: 'syncing' });
+        try {
+          await saveToFirestore(currentUid, { workspaces, activeWorkspaceId });
+          set({ syncStatus: 'synced', hasUnsavedChanges: false });
+          get().addToast('Changes saved to cloud!');
+        } catch (e) {
+          console.error(e);
+          set({ syncStatus: 'offline' });
+          get().addToast('Failed to save to cloud', 'error');
+        }
       },
 
       /**
        * Reset store state when user signs out.
        */
       clearUserData: () => {
-        if (firestoreUnsubscribe) {
-          firestoreUnsubscribe();
-          firestoreUnsubscribe = null;
-        }
         currentUid = null;
         set({
           workspaces: [],
@@ -637,25 +623,22 @@ export const useTabStore = create(
   )
 );
 
-// Subscribe to state changes and sync to Firestore (user-scoped)
+// Subscribe to state changes to track unsaved changes
 let prevWorkspacesStr = JSON.stringify(useTabStore.getState().workspaces);
 let prevActiveId = useTabStore.getState().activeWorkspaceId;
 
 useTabStore.subscribe((state) => {
-  if (!currentUid) return; // Don't sync if no user is logged in
+  if (!currentUid) return; // Don't track if no user is logged in
   
   const currentWorkspacesStr = JSON.stringify(state.workspaces);
   
   if (currentWorkspacesStr !== prevWorkspacesStr || state.activeWorkspaceId !== prevActiveId) {
     prevWorkspacesStr = currentWorkspacesStr;
     prevActiveId = state.activeWorkspaceId;
-    saveToFirestore(
-      currentUid,
-      {
-        workspaces: state.workspaces,
-        activeWorkspaceId: state.activeWorkspaceId,
-      },
-      (status) => useTabStore.getState().setSyncStatus(status)
-    );
+    
+    // If we aren't currently syncing, flag that there are unsaved changes
+    if (!state.hasUnsavedChanges) {
+      useTabStore.setState({ hasUnsavedChanges: true, syncStatus: 'offline' });
+    }
   }
 });

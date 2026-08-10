@@ -1,5 +1,5 @@
 import { useTabStore } from '../store/useTabStore';
-import { Search, Plus, Download, Upload, CheckSquare, RefreshCw, PictureInPicture2, ListTodo, Cloud, CloudOff } from 'lucide-react';
+import { Search, Plus, Download, Upload, CheckSquare, RefreshCw, PictureInPicture2, ListTodo, Cloud, CloudOff, Save } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
 import Board from './Board';
 
@@ -9,6 +9,8 @@ export default function TopBar({ onOpenCommandPalette, onAddCollection, onImport
   const selectionMode = useTabStore((s) => s.selectionMode);
   const toggleSelectionMode = useTabStore((s) => s.toggleSelectionMode);
   const syncStatus = useTabStore((s) => s.syncStatus);
+  const hasUnsavedChanges = useTabStore((s) => s.hasUnsavedChanges);
+  const saveToCloud = useTabStore((s) => s.saveToCloud);
 
   if (!workspace) return null;
 
@@ -110,12 +112,25 @@ export default function TopBar({ onOpenCommandPalette, onAddCollection, onImport
         </h2>
         <span className="topbar-workspace-badge">{totalTabs} tabs</span>
 
-        {/* Sync Status Badge */}
-        <div className={`sync-status-badge ${syncStatus}`} title={`Cloud Sync: ${syncStatus}`}>
-          {syncStatus === 'synced' && <><Cloud size={13} /> Firebase Synced</>}
-          {syncStatus === 'syncing' && <><RefreshCw size={13} className="spin" /> Syncing…</>}
-          {syncStatus === 'offline' && <><CloudOff size={13} /> Local Mode</>}
-        </div>
+        {/* Save to Cloud Button */}
+        <button
+          className={`topbar-save-btn ${hasUnsavedChanges ? 'unsaved' : ''} ${syncStatus}`}
+          onClick={() => {
+            if (hasUnsavedChanges && syncStatus !== 'syncing') {
+              saveToCloud();
+            }
+          }}
+          disabled={!hasUnsavedChanges || syncStatus === 'syncing'}
+          title={hasUnsavedChanges ? 'You have unsaved changes' : 'All changes saved'}
+        >
+          {syncStatus === 'syncing' ? (
+            <><RefreshCw size={14} className="spin" /> Syncing…</>
+          ) : hasUnsavedChanges ? (
+            <><Save size={14} /> Save to Cloud</>
+          ) : (
+            <><Cloud size={14} /> Synced</>
+          )}
+        </button>
       </div>
       <div className="topbar-right">
         <button className="topbar-btn" onClick={onToggleTodo} title="To-Do List">
