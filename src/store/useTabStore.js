@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { saveToFirestore, loadFromFirestore, subscribeToFirestore, migrateOldData } from './firestoreSync';
+import { saveToFirestore, loadFromFirestore, subscribeToFirestore } from './firestoreSync';
 
 const COLLECTION_COLORS = [
   '#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4',
@@ -152,37 +152,7 @@ export const useTabStore = create(
           firestoreUnsubscribe = null;
         }
 
-        // Step 1: Attempt migration from legacy single-user data
-        const migrated = await migrateOldData(uid);
-        if (migrated && migrated.workspaces && migrated.workspaces.length > 0) {
-          const activeId = migrated.activeWorkspaceId && migrated.workspaces.some(w => w.id === migrated.activeWorkspaceId)
-            ? migrated.activeWorkspaceId
-            : migrated.workspaces[0].id;
-          set({
-            workspaces: migrated.workspaces,
-            activeWorkspaceId: activeId,
-            firebaseReady: true,
-            syncStatus: 'synced',
-          });
-          get().addToast('Your tabs have been migrated to your account!');
-          // Subscribe and return early
-          firestoreUnsubscribe = subscribeToFirestore(
-            uid,
-            (remoteData) => {
-              if (remoteData.workspaces && remoteData.workspaces.length > 0) {
-                set({
-                  workspaces: remoteData.workspaces,
-                  activeWorkspaceId: remoteData.activeWorkspaceId || remoteData.workspaces[0].id,
-                  syncStatus: 'synced',
-                });
-              }
-            },
-            () => set({ syncStatus: 'offline' })
-          );
-          return;
-        }
-
-        // Step 2: Load user's own data from Firestore
+        // Load user's own data from Firestore
         const cloudData = await loadFromFirestore(uid);
 
         if (cloudData && !cloudData.error && !cloudData.empty && Array.isArray(cloudData.workspaces) && cloudData.workspaces.length > 0) {
