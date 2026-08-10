@@ -52,11 +52,15 @@ export const useAuthStore = create((set, get) => ({
       // onAuthStateChanged will handle setting the user
     } catch (err) {
       console.error('Google sign-in failed:', err);
-      let message = 'Google sign-in failed. Please try again.';
+      let message = `Google sign-in failed: ${err.message || 'Please try again.'}`;
       if (err.code === 'auth/popup-closed-by-user') {
         message = 'Sign-in popup was closed. Please try again.';
       } else if (err.code === 'auth/popup-blocked') {
         message = 'Sign-in popup was blocked by your browser. Please allow popups.';
+      } else if (err.code === 'auth/operation-not-allowed') {
+        message = 'Google sign-in is disabled in your Firebase console under Authentication > Sign-in method.';
+      } else if (err.code) {
+        message = `Google sign-in error (${err.code}): ${err.message}`;
       }
       set({ authError: message, authLoading: false });
     }
